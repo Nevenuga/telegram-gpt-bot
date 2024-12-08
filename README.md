@@ -1,12 +1,12 @@
-# Telegram Volleyball Invitation Bot
+# Telegram GPT Bot
 
 ## Описание
-Телеграм-бот, который использует AI для обнаружения приглашений на волейбол в групповых чатах.
+Телеграм-бот, который использует AI для обнаружения целевого сообщения и ответа на него в групповых чатах и ЛС.
 
 ## Возможности
 - Анализ сообщений в Telegram-чате
-- Определение приглашений на волейбол с помощью OpenAI
-- Автоматический ответ на приглашения
+- Определение целевого сообщения с помощью OpenAI
+- Автоматический ответ от лица пользователя
 
 ## Установка
 
@@ -18,8 +18,8 @@
 ### Шаги установки
 1. Клонируйте репозиторий
 ```bash
-git clone https://github.com/yourusername/telegram-volleyball-bot.git
-cd telegram-volleyball-bot
+git clone https://github.com/Nevenuga/telegram-gpt-bot.git
+cd telegram-gpt-bot
 ```
 
 2. Установите зависимости
@@ -38,5 +38,3 @@ cp .env.example .env
 ```bash
 python telegram_bot.py
 ```
-
-
