@@ -3,8 +3,17 @@ import asyncio
 from telethon import TelegramClient, events
 import openai
 from dotenv import load_dotenv
+import argparse
+import sys
 
-load_dotenv()
+parser = argparse.ArgumentParser(description='Telegram GPT Bot')
+parser.add_argument('--env', type=str, help='Путь к .env файлу', default='.env')
+parser.add_argument('--session', type=str, help='Путь к файлу сессии', default='session_name.session')
+args = parser.parse_args()
+
+load_dotenv(args.env)
+
+SESSION_FILE = args.session
 
 API_ID = int(os.getenv('TELEGRAM_API_ID'))
 API_HASH = os.getenv('TELEGRAM_API_HASH')
@@ -30,39 +39,41 @@ async def check_target_message(message_text):
         print(f"Error in ChatGPT API call: {e}")
         return "false"
 
+async def authenticate_client():
+    """Authenticate Telegram client, creating session if needed."""
+    try:
+        if os.path.exists(SESSION_FILE) and os.path.getsize(SESSION_FILE) == 0:
+            print(f"Файл сессии {SESSION_FILE} пуст. Требуется новая авторизация.")
+            os.remove(SESSION_FILE)
+
+        client = TelegramClient(SESSION_FILE, API_ID, API_HASH)
+        
+        await client.connect()
+        
+        if not await client.is_user_authorized():
+            print("Требуется авторизация в Telegram.")
+            print(f"Введите номер телефона (с кодом страны, например +79XXXXXXXXXX):")
+            phone_number = input().strip()
+            
+            await client.send_code_request(phone_number)
+            
+            print("Введите код подтверждения, отправленный в Telegram:")
+            code = input().strip()
+            await client.sign_in(phone=phone_number, code=code)
+        
+        return client
+
+    except Exception as e:
+        print(f"Ошибка авторизации: {e}")
+        sys.exit(1)
+
 async def main():
     print("Запуск бота...")
     print("Процесс авторизации в Telegram")
     
     try:
-        client_telegram = TelegramClient('session_name', API_ID, API_HASH, system_version="4.16.30-vxCUSTOM")
-        print("Подключаемся к Telegram...")
-        
-        try:
-            await asyncio.wait_for(client_telegram.connect(), timeout=30)
-        except asyncio.TimeoutError:
-            print("Превышено время ожидания подключения!")
-            return
-        
+        client_telegram = await authenticate_client()
         print("Подключение установлено")
-        
-        if not await client_telegram.is_user_authorized():
-            print("Требуется авторизация")
-            phone = input("Введите ваш номер телефона (например, +79001234567): ")
-            print(f"Отправляем код на номер {phone}")
-            
-            try:
-                await client_telegram.send_code_request(phone)
-                print("Код отправлен в Telegram")
-                code = input("Введите код, который пришел в Telegram: ")
-                print("Выполняем вход...")
-                await client_telegram.sign_in(phone, code)
-                print("Вход выполнен успешно")
-            except Exception as e:
-                print(f"Ошибка при авторизации: {str(e)}")
-                return
-        else:
-            print("Уже авторизованы")
         
         @client_telegram.on(events.NewMessage)
         async def handle_new_message(event):
@@ -89,10 +100,11 @@ async def main():
         print(f"Бот активен и слушает сообщения в чате с ID: {TARGET_CHAT_ID}")
         print("Для остановки бота нажмите Ctrl+C")
         
+        # Держим бота активным
         await client_telegram.run_until_disconnected()
+
     except Exception as e:
-        print(f"Произошла ошибка: {str(e)}")
-        raise
+        print(f"Ошибка при запуске бота: {e}")
 
 if __name__ == '__main__':
     asyncio.run(main())
